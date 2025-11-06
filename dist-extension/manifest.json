@@ -1,0 +1,81 @@
+{
+  "manifest_version": 3,
+  "name": "Web Security Guardian",
+  "version": "1.0.0",
+  "description": "基于Vue3的浏览器安全防护插件 - 提供恶意URL检测、XSS防护、隐私追踪阻止等功能",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "webRequest",
+    "webNavigation",
+    "scripting",
+    "tabs",
+    "notifications",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "service-worker-loader.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "assets/index.ts-DpiKWZzg.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "Web Security Guardian",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "32": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "128": "icons/icon.svg"
+    }
+  },
+  "options_page": "src/options/index.html",
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "assets/*",
+        "assets/index.ts-DpiKWZzg.js"
+      ],
+      "use_dynamic_url": false
+    }
+  ],
+  "icons": {
+    "16": "icons/icon.svg",
+    "32": "icons/icon.svg",
+    "48": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "malicious_urls",
+        "enabled": true,
+        "path": "rules/malicious-urls.json"
+      },
+      {
+        "id": "tracker_blocking",
+        "enabled": true,
+        "path": "rules/tracker-blocking.json"
+      }
+    ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "../../../../@crx/manifest": {
+    "file": "assets/crx-manifest.js-BCRVabye.js",
+    "name": "crx-manifest.js",
+    "src": "../../../../@crx/manifest",
+    "isEntry": true
+  },
+  "__plugin-vue_export-helper-CwtXtYS3.js": {
+    "file": "assets/_plugin-vue_export-helper-CwtXtYS3.js",
+    "name": "_plugin-vue_export-helper",
+    "css": [
+      "assets/_plugin-vue_export-helper-TOMzp7mW.css"
+    ]
+  },
+  "__plugin-vue_export-helper-TOMzp7mW.css": {
+    "file": "assets/_plugin-vue_export-helper-TOMzp7mW.css",
+    "src": "__plugin-vue_export-helper-TOMzp7mW.css"
+  },
+  "src/background/index.ts": {
+    "file": "assets/index.ts-CdyPwQAY.js",
+    "name": "index.ts",
+    "src": "src/background/index.ts",
+    "isEntry": true
+  },
+  "src/content/index.ts": {
+    "file": "assets/index.ts-DpiKWZzg.js",
+    "name": "index.ts",
+    "src": "src/content/index.ts",
+    "isEntry": true
+  },
+  "src/options/index.html": {
+    "file": "assets/index.html-CMOVv5da.js",
+    "name": "index.html",
+    "src": "src/options/index.html",
+    "isEntry": true,
+    "imports": [
+      "__plugin-vue_export-helper-CwtXtYS3.js"
+    ],
+    "css": [
+      "assets/index-Bs1WtJlQ.css"
+    ]
+  },
+  "src/popup/index.html": {
+    "file": "assets/index.html-DdqanuAm.js",
+    "name": "index.html",
+    "src": "src/popup/index.html",
+    "isEntry": true,
+    "imports": [
+      "__plugin-vue_export-helper-CwtXtYS3.js"
+    ],
+    "css": [
+      "assets/index-CV4_qdOj.css"
+    ]
+  }
+}
