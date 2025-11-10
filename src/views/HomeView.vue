@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-const xssInput1 = ref('')
-const xssInput2 = ref('')
-const xssInput3 = ref('')
-const obfuscatedCode = ref('')
+const xssInput1 = ref('<script>console.log("XSS")<\/script>')
+const xssInput2 = ref('<img src=x onerror="console.log(\'XSS\')">')
+const xssInput3 = ref('<a href="javascript:console.log(\'XSS\')">点击<\/a>')
+const obfuscatedCode = ref('var _0x1a2b=["\\x63\\x6F\\x6E\\x73\\x6F\\x6C\\x65","\\x6C\\x6F\\x67","\\x48\\x65\\x6C\\x6C\\x6F"];window[_0x1a2b[0]][_0x1a2b[1]](_0x1a2b[2]);')
 const trackerStatus = ref<string[]>([])
 
 function testXSS1() {
@@ -229,9 +229,9 @@ onMounted(() => {
         <h2>SQL注入检测测试</h2>
         <div class="test-item">
           <h3>6. 表单SQL注入</h3>
-          <form @submit="testSQLInjection">
-            <input name="username" placeholder="用户名 (如: admin' OR '1'='1)" />
-            <input name="search" placeholder="搜索 (如: '; DROP TABLE users--)" />
+          <form @submit.prevent="testSQLInjection">
+            <input name="username" value="admin' OR '1'='1" placeholder="用户名 (如: admin' OR '1'='1)" />
+            <input name="search" value="'; DROP TABLE users--" placeholder="搜索 (如: '; DROP TABLE users--)" />
             <button type="submit">提交表单</button>
           </form>
         </div>
@@ -241,11 +241,11 @@ onMounted(() => {
         <h2>敏感信息泄露检测</h2>
         <div class="test-item">
           <h3>7. 非HTTPS提交敏感数据</h3>
-          <form action="http://example.com/login" method="post" @submit="testSensitiveData">
-            <input name="email" type="email" placeholder="邮箱: security@example.com" />
-            <input name="phone" type="tel" placeholder="手机号: 13800138000" />
-            <input name="id" placeholder="身份证号: 110101199001011234" />
-            <input name="card" placeholder="信用卡: 4111 1111 1111 1111" />
+          <form action="http://example.com/login" method="post" @submit.prevent="testSensitiveData">
+            <input name="email" type="email" value="security@example.com" placeholder="邮箱: security@example.com" />
+            <input name="phone" type="tel" value="13800138000" placeholder="手机号: 13800138000" />
+            <input name="id" value="110101199001011234" placeholder="身份证号: 110101199001011234" />
+            <input name="card" value="4111 1111 1111 1111" placeholder="信用卡: 4111 1111 1111 1111" />
             <button type="submit">提交敏感信息</button>
           </form>
         </div>
@@ -307,73 +307,115 @@ onMounted(() => {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
 }
 
 .page {
+  width: 100%;
   min-height: 100vh;
+  display: flex;
+  justify-content: center;
   box-sizing: border-box;
-  padding: 24px;
+  padding: 60px 24px;
   color: #333;
 }
 
 .container {
-  max-width: 1180px;
-  margin: 0 auto;
+  max-width: 1200px;
+  width: 100%;
+  height: fit-content;
+  margin: auto;
   background: #fff;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+  border-radius: 20px;
+  padding: 48px 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 h1 {
   color: #667eea;
   text-align: center;
-  margin: 0 0 12px;
+  margin: 0 0 16px;
+  font-size: 2.5em;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(102, 126, 234, 0.1);
 }
 
 .subtitle {
   text-align: center;
-  color: #555;
-  margin: 0 0 28px;
+  color: #666;
+  margin: 0 0 40px;
+  font-size: 1.1em;
+  font-weight: 500;
 }
 
 .test-section {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 22px;
-  margin-bottom: 24px;
-  border-left: 5px solid #667eea;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 28px;
+  border-left: 6px solid #667eea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.test-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .test-section h2 {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 18px;
+  margin: 0 0 20px;
   color: #764ba2;
+  font-size: 1.4em;
+  font-weight: 600;
 }
 
 .status {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: #155724;
-  background: #d4edda;
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  box-shadow: 0 2px 6px rgba(21, 87, 36, 0.2);
 }
 
 .status.testing {
-  background: #fff3cd;
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
   color: #856404;
+  box-shadow: 0 2px 6px rgba(133, 100, 4, 0.2);
 }
 
 .test-item {
   background: #fff;
-  padding: 18px;
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
+  padding: 22px;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
   margin-bottom: 18px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.test-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .test-item:last-of-type {
@@ -381,53 +423,90 @@ h1 {
 }
 
 .test-item h3 {
-  margin: 0 0 10px;
+  margin: 0 0 14px;
   color: #495057;
-  font-size: 17px;
+  font-size: 1.1em;
+  font-weight: 600;
 }
 
 button {
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.3s;
+  font-weight: 600;
+  transition: all 0.3s ease;
   margin-right: 10px;
   margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+button:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 button:hover {
-  background: #764ba2;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+button:active {
+  transform: translateY(0);
 }
 
 button.danger {
-  background: #dc3545;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
 button.danger:hover {
-  background: #c82333;
+  box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
 }
 
 input,
 textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 16px;
   margin: 8px 0 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
   box-sizing: border-box;
   font-family: 'Courier New', Courier, monospace;
   font-size: 14px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background: #fff;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 textarea {
-  min-height: 110px;
+  min-height: 120px;
   resize: vertical;
+  line-height: 1.6;
 }
 
 .warning {
@@ -494,12 +573,43 @@ code {
 }
 
 @media (max-width: 768px) {
+  .page {
+    padding: 20px 16px;
+  }
+
   .container {
-    padding: 24px 18px;
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  .subtitle {
+    font-size: 1em;
+  }
+
+  .test-section {
+    padding: 20px;
+  }
+
+  .test-section h2 {
+    font-size: 1.2em;
+    flex-wrap: wrap;
+  }
+
+  .test-item {
+    padding: 18px;
   }
 
   button {
     width: 100%;
+    margin-right: 0;
+  }
+
+  .phishing-links {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -56,7 +56,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     // 初始化存储
     chrome.storage.local.set({
-      protectionSettings: {
+      protection_settings: {
         maliciousUrlProtection: true,
         xssProtection: true,
         trackerBlocking: true,
@@ -66,7 +66,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         autoUpdate: true,
         strictMode: false
       },
-      securityStats: {
+      security_stats: {
         totalThreats: 0,
         blockedThreats: 0,
         allowedThreats: 0,
@@ -103,14 +103,14 @@ chrome.webRequest.onBeforeRequest.addListener(
       console.log('🚫 Malicious URL detected (blocked by declarativeNetRequest):', details.url)
       
       // 更新统计
-      chrome.storage.local.get(['securityStats'], (result) => {
-        if (result.securityStats) {
-          const stats = result.securityStats
+      chrome.storage.local.get(['security_stats'], (result) => {
+        if (result.security_stats) {
+          const stats = result.security_stats
           stats.totalThreats++
           stats.blockedThreats++
           stats.threatsByType.malicious_url++
           stats.threatsByLevel.high++
-          chrome.storage.local.set({ securityStats: stats })
+          chrome.storage.local.set({ security_stats: stats })
         }
       })
     }
@@ -120,14 +120,14 @@ chrome.webRequest.onBeforeRequest.addListener(
       console.log('👁️ Tracker request detected (blocked by declarativeNetRequest):', details.url)
       
       // 更新统计
-      chrome.storage.local.get(['securityStats'], (result) => {
-        if (result.securityStats) {
-          const stats = result.securityStats
+      chrome.storage.local.get(['security_stats'], (result) => {
+        if (result.security_stats) {
+          const stats = result.security_stats
           stats.totalThreats++
           stats.blockedThreats++
           stats.threatsByType.tracker++
           stats.threatsByLevel.medium++
-          chrome.storage.local.set({ securityStats: stats })
+          chrome.storage.local.set({ security_stats: stats })
         }
       })
     }
@@ -142,17 +142,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     switch (request.type) {
       case 'GET_SECURITY_STATUS':
-        chrome.storage.local.get(['securityStats'], (result) => {
+        chrome.storage.local.get(['security_stats'], (result) => {
           sendResponse({
-            maliciousUrlsCount: result.securityStats?.blockedThreats || 0,
-            trackersBlocked: result.securityStats?.threatsByType?.tracker || 0
+            maliciousUrlsCount: result.security_stats?.blockedThreats || 0,
+            trackersBlocked: result.security_stats?.threatsByType?.tracker || 0
           })
         })
         return true
         
       case 'GET_STATS':
-        chrome.storage.local.get(['securityStats'], (result) => {
-          sendResponse(result.securityStats || {
+        chrome.storage.local.get(['security_stats'], (result) => {
+          sendResponse(result.security_stats || {
             totalThreats: 0,
             blockedThreats: 0,
             allowedThreats: 0,
@@ -164,7 +164,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true
         
       case 'UPDATE_SETTINGS':
-        chrome.storage.local.set({ protectionSettings: request.data }, () => {
+        chrome.storage.local.set({ protection_settings: request.data }, () => {
           sendResponse({ success: true })
         })
         return true
@@ -184,20 +184,105 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true })
         break
         
-      case 'THREAT_DETECTED':
-        console.log('🚨 Threat detected:', request.data)
+      case 'PAGE_NAVIGATION':
+        console.log('🔄 Page navigation detected, clearing previous threats for:', request.url)
         
-        // 保存威胁记录
-        chrome.storage.local.get(['recentThreats'], (result) => {
-          const threats = result.recentThreats || []
-          threats.unshift(request.data)
+        // 获取当前页面的hostname
+        let hostname = ''
+        try {
+          hostname = new URL(request.url).hostname
+        } catch {
+          hostname = request.url
+        }
+        
+        // 清除该页面的历史威胁
+        chrome.storage.local.get(['threat_history'], (result) => {
+          const allThreats = result.threat_history || []
+          
+          // 过滤掉该页面的威胁，保留其他页面的威胁
+          const filteredThreats = allThreats.filter((threat: any) => {
+            try {
+              const threatHostname = new URL(threat.url).hostname
+              return threatHostname !== hostname
+            } catch {
+              return !threat.url.includes(hostname)
+            }
+          })
+          
+          console.log(`🗑️ Cleared ${allThreats.length - filteredThreats.length} threats for ${hostname}`)
+          
+          // 保存过滤后的威胁
+          chrome.storage.local.set({ threat_history: filteredThreats }, () => {
+            sendResponse({ success: true, clearedCount: allThreats.length - filteredThreats.length })
+          })
+        })
+        return true
+        
+      case 'THREAT_DETECTED':
+        console.log('🚨 Threat detected:', request.threat || request.data)
+        
+        const threat = request.threat || request.data
+        
+        // 更新统计数据
+        chrome.storage.local.get(['security_stats', 'threat_history'], (result) => {
+          const stats = result.security_stats || {
+            totalThreats: 0,
+            blockedThreats: 0,
+            allowedThreats: 0,
+            threatsByType: {
+              malicious_url: 0,
+              xss_attack: 0,
+              sql_injection: 0,
+              tracker: 0,
+              insecure_form: 0,
+              suspicious_script: 0,
+              phishing: 0,
+              data_leak: 0
+            },
+            threatsByLevel: {
+              low: 0,
+              medium: 0,
+              high: 0,
+              critical: 0
+            },
+            lastScanTime: Date.now()
+          }
+          
+          // 更新总数
+          stats.totalThreats++
+          if (threat.blocked) {
+            stats.blockedThreats++
+          } else {
+            stats.allowedThreats++
+          }
+          
+          // 更新按类型统计
+          if (stats.threatsByType[threat.type] !== undefined) {
+            stats.threatsByType[threat.type]++
+          }
+          
+          // 更新按等级统计
+          if (stats.threatsByLevel[threat.level] !== undefined) {
+            stats.threatsByLevel[threat.level]++
+          }
+          
+          stats.lastScanTime = Date.now()
+          
+          // 保存威胁记录
+          const threats = result.threat_history || []
+          threats.unshift(threat)
           
           // 只保留最近100条
           if (threats.length > 100) {
             threats.splice(100)
           }
           
-          chrome.storage.local.set({ recentThreats: threats })
+          chrome.storage.local.set({ 
+            security_stats: stats,
+            threat_history: threats 
+          })
+          
+          console.log('📊 Stats updated:', stats)
         })
         
         sendResponse({ success: true })

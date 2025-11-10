@@ -81,7 +81,7 @@ export class FormMonitor {
 
   private showWarning(threats: ThreatDetection[]) {
     const message = threats.map((threat) => `• ${threat.description}`).join('\n')
-    alert(`⚠️ 检测到安全威胁：\n\n${message}\n\n为了您的安全，表单提交已被阻止。`)
+    console.warn(`⚠️ 检测到安全威胁：\n\n${message}\n\n为了您的安全，表单提交已被阻止。`)
   }
 
   private reportThreats(threats: ThreatDetection[]) {

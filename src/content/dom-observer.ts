@@ -251,9 +251,25 @@ export class DOMObserver {
       const hostname = new URL(url).hostname
       const trustedDomains = [
         window.location.hostname,
+        // 常见 CDN
         'cdnjs.cloudflare.com',
         'ajax.googleapis.com',
-        'code.jquery.com'
+        'code.jquery.com',
+        'cdn.jsdelivr.net',
+        'unpkg.com',
+        'jsdelivr.net',
+        // 大型网站的资源域名
+        'twimg.com',
+        'abs.twimg.com',
+        'pbs.twimg.com',
+        'ton.twimg.com',
+        'facebook.net',
+        'fbcdn.net',
+        'gstatic.com',
+        'googleusercontent.com',
+        'cloudflare.com',
+        'cloudflareinsights.com',
+        'cloudfront.net'
       ]
       
       return trustedDomains.some(trusted => 
@@ -268,8 +284,7 @@ export class DOMObserver {
     if (this.threatCallback) {
       this.threatCallback(threat)
     }
-    
-    console.warn('🚨 DOM Observer detected threat:', threat)
+    // 日志已在 handleThreat 中统一输出，这里不再重复
   }
 
   destroy() {

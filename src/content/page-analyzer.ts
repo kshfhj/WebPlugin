@@ -121,11 +121,25 @@ export class PageAnalyzer {
       const hostname = new URL(url).hostname
       const trustedDomains = [
         window.location.hostname,
+        // 常见 CDN
         'cdnjs.cloudflare.com',
         'ajax.googleapis.com',
         'code.jquery.com',
         'unpkg.com',
-        'jsdelivr.net'
+        'jsdelivr.net',
+        'cdn.jsdelivr.net',
+        // 大型网站的资源域名
+        'twimg.com',
+        'abs.twimg.com',
+        'pbs.twimg.com',
+        'ton.twimg.com',
+        'facebook.net',
+        'fbcdn.net',
+        'gstatic.com',
+        'googleusercontent.com',
+        'cloudflare.com',
+        'cloudflareinsights.com',
+        'cloudfront.net'
       ]
       
       return trustedDomains.some(trusted => 

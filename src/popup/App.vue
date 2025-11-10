@@ -136,14 +136,81 @@ const securityStore = useSecurityStore()
 const isScanning = ref(false)
 const currentUrl = ref('加载中...')
 const isHttps = ref(false)
+const currentFullUrl = ref('')
 
 // 计算属性
 const isActive = computed(() => securityStore.isActive)
 const securityScore = computed(() => securityStore.securityScore)
-const stats = computed(() => securityStore.stats)
-const recentThreats = computed(() => securityStore.recentThreats)
 const settings = computed(() => securityStore.settings)
-const blockedThreatsToday = computed(() => securityStore.blockedThreatsToday)
+
+// 获取当前页面的hostname
+const currentHostname = computed(() => {
+  try {
+    return new URL(currentFullUrl.value).hostname
+  } catch {
+    return currentUrl.value
+  }
+})
+
+// 过滤当前页面的威胁
+const currentPageThreats = computed(() => {
+  const hostname = currentHostname.value
+  return securityStore.threats.filter(threat => {
+    try {
+      const threatHostname = new URL(threat.url).hostname
+      return threatHostname === hostname
+    } catch {
+      return threat.url.includes(hostname)
+    }
+  })
+})
+
+// 当前页面最近的威胁（最多显示3条）
+const recentThreats = computed(() => {
+  return currentPageThreats.value.slice(0, 10)
+})
+
+// 当前页面的统计数据
+const stats = computed(() => {
+  const pageThreats = currentPageThreats.value
+  const statsData = {
+    totalThreats: pageThreats.length,
+    blockedThreats: pageThreats.filter(t => t.blocked).length,
+    allowedThreats: pageThreats.filter(t => !t.blocked).length,
+    threatsByType: {} as any,
+    threatsByLevel: {} as any,
+    lastScanTime: Date.now()
+  }
+  
+  // 统计类型
+  pageThreats.forEach(threat => {
+    if (!statsData.threatsByType[threat.type]) {
+      statsData.threatsByType[threat.type] = 0
+    }
+    statsData.threatsByType[threat.type]++
+  })
+  
+  // 统计等级
+  pageThreats.forEach(threat => {
+    if (!statsData.threatsByLevel[threat.level]) {
+      statsData.threatsByLevel[threat.level] = 0
+    }
+    statsData.threatsByLevel[threat.level]++
+  })
+  
+  return statsData
+})
+
+// 今日阻止的威胁（当前页面）
+const blockedThreatsToday = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayTimestamp = today.getTime()
+  
+  return currentPageThreats.value.filter(threat => 
+    threat.blocked && threat.timestamp >= todayTimestamp
+  ).length
+})
 
 const threatLevel = computed(() => {
   if (securityScore.value >= 90) return 'success'
@@ -237,11 +304,12 @@ async function getCurrentPageInfo() {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
       if (tab.url) {
+        currentFullUrl.value = tab.url
         currentUrl.value = new URL(tab.url).hostname
         isHttps.value = tab.url.startsWith('https://')
         
         // 根据页面安全状况计算评分
-        calculatePageScore(tab.url)
+        await calculatePageScore(tab.url)
       }
     }
   } catch (error) {
@@ -250,37 +318,113 @@ async function getCurrentPageInfo() {
   }
 }
 
-function calculatePageScore(url: string) {
+async function calculatePageScore(url: string) {
   let score = 100
   
-  // 检查HTTPS
-  if (!url.startsWith('https://')) {
+  // 获取当前页面的hostname
+  let currentHostname = ''
+  try {
+    currentHostname = new URL(url).hostname
+  } catch {
+    currentHostname = url
+  }
+  
+  // 从统计数据中获取威胁信息
+  const stats = securityStore.stats
+  const allThreats = securityStore.recentThreats
+  
+  // 只计算当前页面的威胁（根据URL匹配）
+  const currentPageThreats = allThreats.filter(threat => {
+    try {
+      const threatHostname = new URL(threat.url).hostname
+      return threatHostname === currentHostname
+    } catch {
+      return threat.url.includes(currentHostname)
+    }
+  })
+  
+  // 根据威胁等级扣分（只计算当前页面的威胁）
+  currentPageThreats.forEach(threat => {
+    switch (threat.level) {
+      case 'critical':
+        score -= 30
+        break
+      case 'high':
+        score -= 20
+        break
+      case 'medium':
+        score -= 10
+        break
+      case 'low':
+        score -= 5
+        break
+    }
+  })
+  
+  // 检查HTTPS（非本地环境）
+  const isLocalDev = url.includes('localhost') || url.includes('127.0.0.1')
+  if (!url.startsWith('https://') && !isLocalDev) {
     score -= 15
     console.log('❌ 未使用HTTPS，扣15分')
   }
   
-  // 检查是否为本地地址
-  if (url.includes('localhost') || url.includes('127.0.0.1')) {
-    score = 100 // 本地开发环境不扣分
-  }
+  // 确保分数在0-100之间
+  score = Math.max(0, Math.min(100, score))
   
   // 更新store中的评分
   securityStore.currentPageAnalysis = {
     url: url,
     score: score,
-    threats: [],
-    recommendations: score < 90 ? ['建议使用HTTPS加密连接'] : ['网站安全性良好'],
+    threats: currentPageThreats,
+    recommendations: score < 90 ? 
+      ['发现安全威胁，建议谨慎操作'] : 
+      ['网站安全性良好'],
     scanTime: Date.now(),
     isSecure: score >= 90
   }
   
   console.log(`🔍 页面安全评分: ${score}`)
+  console.log(`📊 当前页面威胁: ${currentPageThreats.length} / 总威胁: ${allThreats.length}`)
+}
+
+// 监听storage变化
+function setupStorageListener() {
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local') {
+        console.log('📦 Storage changed:', changes)
+        
+        // 重新加载数据
+        if (changes.security_stats || changes.threat_history) {
+          securityStore.loadStats()
+          securityStore.loadThreats()
+          
+          // 重新计算评分
+          if (currentFullUrl.value) {
+            calculatePageScore(currentFullUrl.value)
+          }
+        }
+      }
+    })
+  }
+}
+
+// 监听标签页切换
+function setupTabListener() {
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    chrome.tabs.onActivated.addListener(async () => {
+      console.log('🔄 Tab switched, refreshing page info')
+      await getCurrentPageInfo()
+    })
+  }
 }
 
 // 生命周期
 onMounted(async () => {
   await securityStore.initialize()
   await getCurrentPageInfo()
+  setupStorageListener()
+  setupTabListener()
 })
 </script>
 
@@ -464,3 +608,4 @@ onMounted(async () => {
   border-bottom: 1px solid #f0f0f0;
 }
 </style>
+

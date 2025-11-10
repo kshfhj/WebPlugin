@@ -104,8 +104,8 @@ function showThreatToast(threat: ThreatDetection) {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      z-index: 100000;
-      max-width: 340px;
+      z-index: 2147483647;
+      max-width: 380px;
       pointer-events: none;
     `
     document.body.appendChild(container)
@@ -115,47 +115,105 @@ function showThreatToast(threat: ThreatDetection) {
   toast.style.cssText = `
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: 14px;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 16px;
     color: #fff;
-    box-shadow: 0 14px 28px rgba(0,0,0,0.25);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
     background: ${getThreatGradient(threat.level)};
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
     pointer-events: auto;
     position: relative;
     overflow: hidden;
+    opacity: 0;
+    transform: translateX(400px) scale(0.9);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(10px);
   `
 
-  toast.innerHTML = `
-    <div style="font-size: 20px; line-height: 1;">🛡️</div>
+  // 添加光泽效果
+  const shine = document.createElement('div')
+  shine.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shine 3s infinite;
+  `
+  toast.appendChild(shine)
+
+  toast.innerHTML += `
+    <div style="font-size: 24px; line-height: 1; animation: bounce 0.6s ease;">🛡️</div>
     <div style="flex: 1; min-width: 0;">
-      <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">
+      <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; letter-spacing: 0.3px;">
         ${getThreatTypeLabel(threat.type)} · ${threat.level.toUpperCase()}
       </div>
-      <div style="font-size: 13px; word-break: break-word;">${threat.description}</div>
-      <div style="margin-top: 6px; font-size: 12px; opacity: 0.85;">
-        来源：${hostname}
+      <div style="font-size: 13px; word-break: break-word; line-height: 1.6; opacity: 0.95;">${threat.description}</div>
+      <div style="margin-top: 8px; font-size: 11px; opacity: 0.8; font-weight: 500;">
+        📍 ${hostname}
       </div>
     </div>
     <button type="button" aria-label="关闭警告"
-      style="background: transparent; border: none; color: #fff; font-size: 18px; cursor: pointer; line-height: 1;">×</button>
+      style="background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 20px; cursor: pointer; line-height: 1; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;">×</button>
   `
 
+  // 添加动画样式
+  if (!document.getElementById('wsg-toast-animations')) {
+    const style = document.createElement('style')
+    style.id = 'wsg-toast-animations'
+    style.textContent = `
+      @keyframes shine {
+        0% { left: -100%; }
+        50% { left: 100%; }
+        100% { left: 100%; }
+      }
+      @keyframes bounce {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+      }
+    `
+    document.head.appendChild(style)
+  }
+
   const closeButton = toast.querySelector('button')
+  closeButton?.addEventListener('mouseenter', () => {
+    if (closeButton instanceof HTMLElement) {
+      closeButton.style.background = 'rgba(255,255,255,0.3)'
+      closeButton.style.transform = 'scale(1.1)'
+    }
+  })
+  closeButton?.addEventListener('mouseleave', () => {
+    if (closeButton instanceof HTMLElement) {
+      closeButton.style.background = 'rgba(255,255,255,0.2)'
+      closeButton.style.transform = 'scale(1)'
+    }
+  })
   closeButton?.addEventListener('click', (event) => {
     event.stopPropagation()
-    toast.remove()
+    toast.style.opacity = '0'
+    toast.style.transform = 'translateX(400px) scale(0.8)'
+    setTimeout(() => toast.remove(), 400)
   })
 
   container.appendChild(toast)
 
+  // 触发进入动画
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1'
+      toast.style.transform = 'translateX(0) scale(1)'
+    })
+  })
+
+  // 自动消失
   setTimeout(() => {
     toast.style.opacity = '0'
-    toast.style.transform = 'translateX(20px)'
-    setTimeout(() => toast.remove(), 300)
+    toast.style.transform = 'translateX(400px) scale(0.8)'
+    setTimeout(() => toast.remove(), 400)
   }, 6000)
 }
 
@@ -167,7 +225,13 @@ function flushPendingToasts() {
 }
 
 function handleThreat(threat: ThreatDetection, options: { notifyBackground?: boolean } = {}) {
-  console.warn('🚨 Web Security Guardian Threat Detected:', threat)
+  // 改进日志输出格式
+  console.warn('🚨 威胁检测:', {
+    类型: getThreatTypeLabel(threat.type),
+    等级: threat.level.toUpperCase(),
+    描述: threat.description,
+    详情: threat.details
+  })
 
   const fingerprint = createThreatFingerprint(threat)
 
@@ -175,9 +239,12 @@ function handleThreat(threat: ThreatDetection, options: { notifyBackground?: boo
     displayedThreatIds.add(threat.id)
   }
 
+  // 显示toast弹窗提示（每次都显示，不去重）
+  showThreatToast(threat)
+  
+  // 记录指纹用于统计，但不影响显示
   if (!threatFingerprints.has(fingerprint)) {
     threatFingerprints.add(fingerprint)
-    showThreatToast(threat)
   }
 
   if (options.notifyBackground) {
@@ -313,46 +380,77 @@ function interceptWindowOpen() {
 function startAfterDomReady() {
   flushPendingToasts()
 
-  domObserver.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
-  domObserver.initialize()
+  // 通知 background 页面导航，清除该页面的历史威胁
+  if (hasChromeRuntime()) {
+    chrome.runtime
+      .sendMessage({
+        type: 'PAGE_NAVIGATION',
+        url: window.location.href
+      })
+      .then((response: any) => {
+        if (response?.clearedCount > 0) {
+          console.log(`🗑️ 已清除 ${response.clearedCount} 条历史威胁，开始重新评估`)
+        }
+      })
+      .catch((error: unknown) => console.error('Failed to notify page navigation:', error))
+  }
 
-  formMonitor.setThreatCallback((threat) => handleThreat(threat))
-  formMonitor.initialize()
+  // 延迟启动监控，避免检测页面初始加载的脚本和资源
+  setTimeout(() => {
+    // 启动实时监控，所有威胁都报告到background
+    domObserver.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
+    domObserver.initialize()
+
+    // 表单监控也要报告到background
+    formMonitor.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
+    formMonitor.initialize()
+
+    // 脚本监控也要报告到background（延迟启动）
+    scriptMonitor.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
+    scriptMonitor.initialize()
+
+    console.log('✅ Web Security Guardian 内容脚本已激活（实时监控模式）')
+  }, 3000) // 延迟 3 秒，让页面完全加载完成（包括动态脚本）
 
   pageAnalyzer.initialize()
-  pageAnalyzer.analyzePage().then((analysis) => {
-    if (analysis.threats.length > 0) {
-      analysis.threats.forEach((threat) => handleThreat(threat, { notifyBackground: true }))
-    }
-    if (hasChromeRuntime()) {
-      chrome.runtime
-        .sendMessage({
-          type: 'PAGE_ANALYZED',
-          analysis
-        })
-        .catch((error: unknown) => console.error('Failed to send PAGE_ANALYZED message:', error))
-    }
-  })
+  
+  // 禁用初始页面分析，避免页面加载时就弹出大量警报
+  // pageAnalyzer.analyzePage().then((analysis) => {
+  //   if (analysis.threats.length > 0) {
+  //     analysis.threats.forEach((threat) => handleThreat(threat, { notifyBackground: true }))
+  //   }
+  //   if (hasChromeRuntime()) {
+  //     chrome.runtime
+  //       .sendMessage({
+  //         type: 'PAGE_ANALYZED',
+  //         analysis
+  //       })
+  //       .catch((error: unknown) => console.error('Failed to send PAGE_ANALYZED message:', error))
+  //   }
+  // })
 
-  runBaselineChecks()
+  // 禁用基础检查，避免页面加载时就报告威胁
+  // runBaselineChecks()
 
-  scriptMonitor.scanScripts().then((threats) => {
-    threats.forEach((threat) => handleThreat(threat, { notifyBackground: true }))
-  })
+  // 禁用初始脚本扫描，只监控动态添加的脚本
+  // scriptMonitor.scanScripts().then((threats) => {
+  //   threats.forEach((threat) => handleThreat(threat, { notifyBackground: true }))
+  // })
 
-  formMonitor.scanForms().then((threats) => {
-    threats.forEach((threat) => handleThreat(threat, { notifyBackground: true }))
-  })
+  // 禁用初始表单扫描，只监控表单提交
+  // formMonitor.scanForms().then((threats) => {
+  //   threats.forEach((threat) => handleThreat(threat, { notifyBackground: true }))
+  // })
 
+  // 监控可疑链接点击
   watchForSuspiciousLinks()
 
-  console.log('✅ Web Security Guardian 内容脚本已激活')
+  console.log('✅ Web Security Guardian 内容脚本已激活（实时监控模式）')
 }
 
 // ===== 脚本入口 =====
 
-scriptMonitor.setThreatCallback((threat) => handleThreat(threat))
-scriptMonitor.initialize()
+// 拦截 window.open（立即执行，因为不会产生误报）
 interceptWindowOpen()
 
 if (document.readyState === 'loading') {
