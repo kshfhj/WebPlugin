@@ -5,9 +5,12 @@
     "src": "../../../../@crx/manifest",
     "isEntry": true
   },
-  "__plugin-vue_export-helper-CwtXtYS3.js": {
-    "file": "assets/_plugin-vue_export-helper-CwtXtYS3.js",
+  "__plugin-vue_export-helper-DpwelZh6.js": {
+    "file": "assets/_plugin-vue_export-helper-DpwelZh6.js",
     "name": "_plugin-vue_export-helper",
+    "imports": [
+      "_security-6RDsp77e.js"
+    ],
     "css": [
       "assets/_plugin-vue_export-helper-TOMzp7mW.css"
     ]
@@ -16,6 +19,14 @@
     "file": "assets/_plugin-vue_export-helper-TOMzp7mW.css",
     "src": "__plugin-vue_export-helper-TOMzp7mW.css"
   },
+  "_index.ts-loader-BuJBaCnr.js": {
+    "file": "assets/index.ts-loader-BuJBaCnr.js",
+    "src": "_index.ts-loader-BuJBaCnr.js"
+  },
+  "_security-6RDsp77e.js": {
+    "file": "assets/security-6RDsp77e.js",
+    "name": "security"
+  },
   "src/background/index.ts": {
     "file": "assets/index.ts-CdyPwQAY.js",
     "name": "index.ts",
@@ -23,30 +34,35 @@
     "isEntry": true
   },
   "src/content/index.ts": {
-    "file": "assets/index.ts-DpiKWZzg.js",
+    "file": "assets/index.ts-DlSqJ0_g.js",
     "name": "index.ts",
     "src": "src/content/index.ts",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_security-6RDsp77e.js"
+    ]
   },
   "src/options/index.html": {
-    "file": "assets/index.html-CMOVv5da.js",
+    "file": "assets/index.html-GyoIHxyD.js",
     "name": "index.html",
     "src": "src/options/index.html",
     "isEntry": true,
     "imports": [
-      "__plugin-vue_export-helper-CwtXtYS3.js"
+      "__plugin-vue_export-helper-DpwelZh6.js",
+      "_security-6RDsp77e.js"
     ],
     "css": [
       "assets/index-Bs1WtJlQ.css"
     ]
   },
   "src/popup/index.html": {
-    "file": "assets/index.html-DdqanuAm.js",
+    "file": "assets/index.html-CL6JB2Fr.js",
     "name": "index.html",
     "src": "src/popup/index.html",
     "isEntry": true,
     "imports": [
-      "__plugin-vue_export-helper-CwtXtYS3.js"
+      "__plugin-vue_export-helper-DpwelZh6.js",
+      "_security-6RDsp77e.js"
     ],
     "css": [
       "assets/index-CV4_qdOj.css"

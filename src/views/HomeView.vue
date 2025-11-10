@@ -68,7 +68,7 @@ function testSQLInjection(event: Event) {
     console.log(`  ${key}: ${value}`)
   }
   console.groupEnd()
-  alert('表单提交被阻止 - 插件应检测到潜在SQL注入')
+  console.log('✅ 表单已提交，等待插件检测...')
   return false
 }
 
@@ -82,7 +82,7 @@ function testSensitiveData(event: Event) {
     console.log(`  ${key}: ${value}`)
   }
   console.groupEnd()
-  alert('检测到敏感信息提交 - 插件应发出警告')
+  console.log('✅ 敏感信息已提交，等待插件检测...')
   return false
 }
 
@@ -111,7 +111,7 @@ function testObfuscatedCode() {
   const code = obfuscatedCode.value.trim()
   if (!code) return
   console.log('检测混淆代码样本:', code.substring(0, 120) + '...')
-  alert('代码已提交检测，请查看控制台输出')
+  console.log('✅ 代码已提交检测，等待插件反馈...')
 }
 
 function updateTrackerStatus(message: string) {
@@ -183,16 +183,11 @@ onMounted(() => {
       <h1>🛡️ Web Security Guardian</h1>
       <p class="subtitle">浏览器安全插件综合危险行为测试页</p>
 
-      <div class="info">
-        <strong>测试说明：</strong> 本页面包含多个高风险场景，仅供本地或受控环境下测试安全插件拦截能力。
-        请勿在真实生产环境或未授权网络中使用。
-      </div>
 
       <section class="test-section">
         <h2>恶意URL访问测试 <span class="status testing">Testing</span></h2>
         <div class="test-item">
           <h3>1. 模拟驱动下载</h3>
-          <p>尝试访问常见恶意下载地址，插件应提前阻止或提示用户风险。</p>
           <button class="danger" @click="openMaliciousUrl('http://malware-test.invalid/drive-by-download.exe')">
             打开恶意下载链接
           </button>
@@ -202,7 +197,6 @@ onMounted(() => {
           <button class="danger" @click="injectMaliciousIframe('http://exploit-kit.invalid/landing')">
             注入隐藏iframe
           </button>
-          <p class="warning">所有域名均为示例，请根据需要替换为内部测试域。切勿指向真实恶意站点。</p>
         </div>
       </section>
 
@@ -210,19 +204,16 @@ onMounted(() => {
         <h2>XSS攻击检测测试 <span class="status testing">Testing</span></h2>
         <div class="test-item">
           <h3>2. Script标签注入</h3>
-          <p>尝试输入 <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code> 等脚本。</p>
           <input v-model="xssInput1" placeholder="在此输入恶意payload..." />
           <button @click="testXSS1">触发Script注入</button>
         </div>
         <div class="test-item">
           <h3>3. 事件处理器注入</h3>
-          <p>尝试输入 <code>&lt;img src=x onerror="alert('XSS')"&gt;</code>。</p>
           <input v-model="xssInput2" placeholder="测试onerror事件..." />
           <button @click="testXSS2">触发事件注入</button>
         </div>
         <div class="test-item">
           <h3>4. JavaScript伪协议</h3>
-          <p>尝试输入 <code>&lt;a href="javascript:alert('XSS')"&gt;点击&lt;/a&gt;</code>。</p>
           <input v-model="xssInput3" placeholder="测试javascript:协议..." />
           <button @click="testXSS3">触发协议注入</button>
         </div>
@@ -231,7 +222,6 @@ onMounted(() => {
           <button class="danger" @click="testEval">测试 eval()</button>
           <button class="danger" @click="testFunctionConstructor">测试 Function()</button>
           <button class="danger" @click="testSetTimeoutString">测试 setTimeout(string)</button>
-          <p><small>安全插件应拦截或告警这些高风险 API 调用。</small></p>
         </div>
       </section>
 
@@ -239,21 +229,11 @@ onMounted(() => {
         <h2>SQL注入检测测试</h2>
         <div class="test-item">
           <h3>6. 表单SQL注入</h3>
-          <p>在以下表单中输入典型SQL注入Payload，插件应在提交时阻止。</p>
           <form @submit="testSQLInjection">
             <input name="username" placeholder="用户名 (如: admin' OR '1'='1)" />
             <input name="search" placeholder="搜索 (如: '; DROP TABLE users--)" />
             <button type="submit">提交表单</button>
           </form>
-          <div class="warning">
-            常见测试字符串：
-            <ul>
-              <li><code>' OR '1'='1</code> - OR恒真条件</li>
-              <li><code>'; DROP TABLE users--</code> - 删除表注入</li>
-              <li><code>1' UNION SELECT * FROM users--</code> - UNION攻击</li>
-              <li><code>' AND SLEEP(5)--</code> - 时间盲注</li>
-            </ul>
-          </div>
         </div>
       </section>
 
@@ -261,7 +241,6 @@ onMounted(() => {
         <h2>敏感信息泄露检测</h2>
         <div class="test-item">
           <h3>7. 非HTTPS提交敏感数据</h3>
-          <p>该表单模拟在不安全通道上传输敏感字段，插件应拦截并提示。</p>
           <form action="http://example.com/login" method="post" @submit="testSensitiveData">
             <input name="email" type="email" placeholder="邮箱: security@example.com" />
             <input name="phone" type="tel" placeholder="手机号: 13800138000" />
@@ -269,7 +248,6 @@ onMounted(() => {
             <input name="card" placeholder="信用卡: 4111 1111 1111 1111" />
             <button type="submit">提交敏感信息</button>
           </form>
-          <p class="warning">插件应检测到敏感字段在非HTTPS环境被提交。</p>
         </div>
       </section>
 
@@ -279,7 +257,6 @@ onMounted(() => {
           <h3>8. 动态脚本注入</h3>
           <button class="danger" @click="injectMaliciousScript">注入可疑内联脚本</button>
           <button class="danger" @click="injectExternalScript">加载外部恶意脚本</button>
-          <p><small>此操作会创建动态脚本节点，插件应侦测并阻断。</small></p>
         </div>
         <div class="test-item">
           <h3>9. 混淆代码检测</h3>
@@ -295,7 +272,6 @@ onMounted(() => {
           <button @click="loadGoogleAnalytics">加载 Google Analytics</button>
           <button @click="loadFacebookPixel">加载 Facebook Pixel</button>
           <button @click="loadMixpanel">加载 Mixpanel</button>
-          <p class="warning">安全插件应监控并阻断第三方追踪器。</p>
           <div class="tracker-status">
             <p
               v-for="(entry, index) in trackerStatus"
@@ -312,7 +288,6 @@ onMounted(() => {
         <h2>钓鱼网站检测测试</h2>
         <div class="test-item">
           <h3>11. 可疑链接集合</h3>
-          <p>以下为模拟钓鱼域名，仅作拦截测试用，切勿点击访问生产环境。</p>
           <div class="phishing-links">
             <a href="http://paypal-secure-verify.test" target="_blank" rel="noreferrer">paypal-secure-verify.test</a>
             <a href="http://amazon-account-verify.test" target="_blank" rel="noreferrer">amazon-account-verify.test</a>
@@ -320,18 +295,9 @@ onMounted(() => {
             <a href="http://free-iphone-giveaway.test" target="_blank" rel="noreferrer">free-iphone-giveaway.test</a>
             <a href="http://bitcoin-doubler.test" target="_blank" rel="noreferrer">bitcoin-doubler.test</a>
           </div>
-          <p class="warning">⚠️ 插件应在用户点击前弹出告警或阻断访问。</p>
         </div>
       </section>
 
-      <div class="info">
-        <strong>📊 调试建议：</strong>
-        <ul>
-          <li>使用浏览器开发者工具 (F12) 查看控制台输出与网络请求。</li>
-          <li>观察插件面板中的实时拦截日志与统计。</li>
-          <li>建议在独立浏览器配置文件或沙箱环境中进行演练。</li>
-        </ul>
-      </div>
     </div>
   </main>
 </template>

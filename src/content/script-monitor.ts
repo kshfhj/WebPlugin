@@ -3,6 +3,9 @@
  */
 
 import type { ThreatDetection } from '../types'
+import { ThreatLevel, ThreatType } from '../types'
+
+declare const chrome: any
 
 export class ScriptMonitor {
   private suspiciousPatterns = [
@@ -16,10 +19,16 @@ export class ScriptMonitor {
     /sessionStorage\./gi
   ]
 
+  private threatCallback?: (threat: ThreatDetection) => void
+
   initialize() {
     console.log('📜 Script Monitor initialized')
     this.setupRealTimeMonitoring()
     this.interceptDangerousFunctions()
+  }
+
+  setThreatCallback(callback: (threat: ThreatDetection) => void) {
+    this.threatCallback = callback
   }
   
   // 设置实时监控
@@ -136,8 +145,8 @@ export class ScriptMonitor {
       if (event.data.type === 'WEB_SEC_GUARDIAN_ALERT') {
         const threat: ThreatDetection = {
           id: `dangerous_function_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          type: 'xss_attack',
-          level: 'high',
+          type: ThreatType.XSS_ATTACK,
+          level: ThreatLevel.HIGH,
           url: window.location.href,
           description: `检测到危险函数调用: ${event.data.function}()`,
           timestamp: Date.now(),
@@ -155,11 +164,14 @@ export class ScriptMonitor {
   
   // 报告威胁
   private reportThreat(threat: ThreatDetection) {
+    if (this.threatCallback) {
+      this.threatCallback(threat)
+    }
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.sendMessage({
         type: 'THREAT_DETECTED',
         threat
-      }).catch(err => console.error('Failed to report threat:', err))
+      }).catch((err: unknown) => console.error('Failed to report threat:', err))
     }
   }
 
@@ -195,7 +207,7 @@ export class ScriptMonitor {
       if (matches) {
         threats.push({
           id: `suspicious_inline_script_${Date.now()}_${index}_${patternIndex}`,
-          type: 'suspicious_script',
+          type: ThreatType.SUSPICIOUS_SCRIPT,
           level: this.getPatternSeverity(pattern),
           url: window.location.href,
           description: `内联脚本包含可疑代码: ${this.getPatternDescription(pattern)}`,
@@ -214,8 +226,8 @@ export class ScriptMonitor {
     if (content.length > 10000 && this.isObfuscated(content)) {
       threats.push({
         id: `obfuscated_script_${Date.now()}_${index}`,
-        type: 'suspicious_script',
-        level: 'medium',
+        type: ThreatType.SUSPICIOUS_SCRIPT,
+        level: ThreatLevel.MEDIUM,
         url: window.location.href,
         description: '检测到可能的混淆脚本代码',
         timestamp: Date.now(),
@@ -243,8 +255,8 @@ export class ScriptMonitor {
       if (!this.isTrustedDomain(url.hostname)) {
         threats.push({
           id: `untrusted_external_script_${Date.now()}_${index}`,
-          type: 'suspicious_script',
-          level: 'medium',
+          type: ThreatType.SUSPICIOUS_SCRIPT,
+          level: ThreatLevel.MEDIUM,
           url: window.location.href,
           description: `加载来自不可信域名的脚本: ${url.hostname}`,
           timestamp: Date.now(),
@@ -260,8 +272,8 @@ export class ScriptMonitor {
       if (url.protocol === 'http:' && window.location.protocol === 'https:') {
         threats.push({
           id: `mixed_content_script_${Date.now()}_${index}`,
-          type: 'insecure_form',
-          level: 'medium',
+          type: ThreatType.INSECURE_FORM,
+          level: ThreatLevel.MEDIUM,
           url: window.location.href,
           description: 'HTTPS页面加载HTTP脚本（混合内容）',
           timestamp: Date.now(),
@@ -274,8 +286,8 @@ export class ScriptMonitor {
       // 无效的URL
       threats.push({
         id: `invalid_script_src_${Date.now()}_${index}`,
-        type: 'suspicious_script',
-        level: 'high',
+        type: ThreatType.SUSPICIOUS_SCRIPT,
+        level: ThreatLevel.HIGH,
         url: window.location.href,
         description: '脚本src包含无效URL',
         timestamp: Date.now(),
@@ -287,16 +299,16 @@ export class ScriptMonitor {
     return threats
   }
 
-  private getPatternSeverity(pattern: RegExp): 'low' | 'medium' | 'high' | 'critical' {
+  private getPatternSeverity(pattern: RegExp): ThreatLevel {
     const patternString = pattern.toString()
     
-    if (patternString.includes('eval')) return 'high'
-    if (patternString.includes('document.write')) return 'medium'
-    if (patternString.includes('innerHTML.*<script')) return 'high'
-    if (patternString.includes('location.href')) return 'medium'
-    if (patternString.includes('document.cookie')) return 'medium'
+    if (patternString.includes('eval')) return ThreatLevel.HIGH
+    if (patternString.includes('document.write')) return ThreatLevel.MEDIUM
+    if (patternString.includes('innerHTML.*<script')) return ThreatLevel.HIGH
+    if (patternString.includes('location.href')) return ThreatLevel.MEDIUM
+    if (patternString.includes('document.cookie')) return ThreatLevel.MEDIUM
     
-    return 'low'
+    return ThreatLevel.LOW
   }
 
   private getPatternDescription(pattern: RegExp): string {
