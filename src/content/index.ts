@@ -18,10 +18,12 @@ const formMonitor = new FormMonitor()
 const scriptMonitor = new ScriptMonitor()
 const pageAnalyzer = new PageAnalyzer()
 
-const displayedThreatIds = new Set<string>()
 const reportedThreatIds = new Set<string>()
-const threatFingerprints = new Set<string>()
 const pendingToasts: ThreatDetection[] = []
+
+// 用户交互标志：只有在用户交互后才检测
+let hasUserInteracted = false
+let interactionTimeout: number | null = null
 
 // ===== 基础工具 =====
 
@@ -233,41 +235,12 @@ function handleThreat(threat: ThreatDetection, options: { notifyBackground?: boo
     详情: threat.details
   })
 
-  const fingerprint = createThreatFingerprint(threat)
-
-  if (!displayedThreatIds.has(threat.id)) {
-    displayedThreatIds.add(threat.id)
-  }
-
-  // 显示toast弹窗提示（每次都显示，不去重）
+  // 显示toast弹窗提示（允许重复）
   showThreatToast(threat)
-  
-  // 记录指纹用于统计，但不影响显示
-  if (!threatFingerprints.has(fingerprint)) {
-    threatFingerprints.add(fingerprint)
-  }
 
   if (options.notifyBackground) {
     notifyBackground(threat)
   }
-}
-
-function createThreatFingerprint(threat: ThreatDetection): string {
-  let hostname = threat.url
-  try {
-    hostname = new URL(threat.url).hostname
-  } catch {
-    // ignore
-  }
-
-  const detailKeys = ['pattern', 'field', 'src', 'function', 'args'] as const
-  const detailValues = detailKeys
-    .map((key) => (typeof threat.details?.[key] === 'string' ? threat.details?.[key] : ''))
-    .filter(Boolean)
-
-  return [threat.type, hostname, threat.description, ...detailValues]
-    .join('|')
-    .toLowerCase()
 }
 
 // ===== 基础标识 =====
@@ -395,22 +368,55 @@ function startAfterDomReady() {
       .catch((error: unknown) => console.error('Failed to notify page navigation:', error))
   }
 
-  // 延迟启动监控，避免检测页面初始加载的脚本和资源
-  setTimeout(() => {
-    // 启动实时监控，所有威胁都报告到background
+  // ===== 监听用户交互，只在交互后启用监控 =====
+  let monitorsInitialized = false
+  
+  function initializeMonitors() {
+    if (monitorsInitialized) return
+    monitorsInitialized = true
+    
+    // 启动所有监控器
     domObserver.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
     domObserver.initialize()
-
-    // 表单监控也要报告到background
+    
     formMonitor.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
     formMonitor.initialize()
-
-    // 脚本监控也要报告到background（延迟启动）
+    
     scriptMonitor.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
     scriptMonitor.initialize()
-
-    console.log('✅ Web Security Guardian 内容脚本已激活（实时监控模式）')
-  }, 3000) // 延迟 3 秒，让页面完全加载完成（包括动态脚本）
+    
+    console.log('✅ 监控器已启动')
+  }
+  
+  function markUserInteraction() {
+    if (!hasUserInteracted) {
+      hasUserInteracted = true
+      console.log('👆 检测到用户交互，启动监控')
+      // 首次交互时初始化监控器
+      initializeMonitors()
+    }
+    
+    // 清除之前的超时
+    if (interactionTimeout) {
+      clearTimeout(interactionTimeout)
+    }
+    
+    // 交互后5秒内保持检测活跃
+    interactionTimeout = window.setTimeout(() => {
+      hasUserInteracted = false
+      console.log('⏸️ 用户交互超时，暂停监控')
+    }, 5000)
+  }
+  
+  // 监听所有可能触发危险操作的用户交互
+  document.addEventListener('click', markUserInteraction, true)
+  document.addEventListener('submit', markUserInteraction, true)
+  document.addEventListener('keydown', (e) => {
+    // 只监听 Enter 键（可能提交表单）
+    if (e.key === 'Enter') {
+      markUserInteraction()
+    }
+  }, true)
 
   pageAnalyzer.initialize()
   
