@@ -269,18 +269,6 @@ const apiKey = 'your-openrouter-api-key'
 
 编辑 `src/content/index.ts` 中的 `createToastElement()` 函数。
 
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-MIT License
-
-## 👨‍💻 作者
-
-Web Security Guardian Team
-
 ---
 
 **⚠️ 免责声明**: 本项目仅供学习和研究使用，请勿用于非法用途。使用本插件产生的任何后果由使用者自行承担。
