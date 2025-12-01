@@ -99,11 +99,63 @@
         <el-icon><Search /></el-icon>
         扫描当前页面
       </el-button>
+      <el-button @click="showPhishingDialog = true" type="warning">
+        <el-icon><Warning /></el-icon>
+        AI检测
+      </el-button>
       <el-button @click="openOptions">
         <el-icon><Setting /></el-icon>
         设置
       </el-button>
     </div>
+
+    <!-- AI钓鱼网站检测对话框 -->
+    <el-dialog
+      v-model="showPhishingDialog"
+      title="AI钓鱼网站检测"
+      width="90%"
+      :close-on-click-modal="false"
+    >
+      <div class="phishing-detector">
+        <el-input
+          v-model="phishingUrl"
+          placeholder="输入要检测的网址，例如: https://example.com"
+          size="large"
+          clearable
+        >
+          <template #prepend>
+            <el-icon><Link /></el-icon>
+          </template>
+        </el-input>
+        
+        <el-button 
+          type="primary" 
+          @click="detectPhishing"
+          :loading="isAnalyzing"
+          :disabled="!phishingUrl.trim()"
+          style="width: 100%; margin-top: 12px"
+          size="large"
+        >
+          {{ isAnalyzing ? '分析中...' : '开始检测' }}
+        </el-button>
+
+        <div v-if="phishingResult" class="result-box" :class="resultClass">
+          <div class="result-header">
+            <el-icon size="24">
+              <SuccessFilled v-if="isSafe" />
+              <WarningFilled v-else />
+            </el-icon>
+            <h3>{{ resultTitle }}</h3>
+          </div>
+          <div class="result-content" v-html="phishingResult"></div>
+        </div>
+
+        <div v-if="isAnalyzing" class="analyzing-tips">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <p>AI正在分析网址特征，请稍候...</p>
+        </div>
+      </div>
+    </el-dialog>
 
     <!-- 快速开关 -->
     <div class="quick-toggles">
@@ -127,8 +179,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useSecurityStore } from '../stores/security'
 import { 
-  Lock, Check, Close, Warning, Search, Setting 
+  Lock, Check, Close, Warning, Search, Setting, Link, SuccessFilled, WarningFilled, Loading
 } from '@element-plus/icons-vue'
+
+declare const chrome: any
 
 const securityStore = useSecurityStore()
 
@@ -137,6 +191,13 @@ const isScanning = ref(false)
 const currentUrl = ref('加载中...')
 const isHttps = ref(false)
 const currentFullUrl = ref('')
+
+// AI钓鱼网站检测
+const showPhishingDialog = ref(false)
+const phishingUrl = ref('')
+const phishingResult = ref('')
+const isAnalyzing = ref(false)
+const isSafe = ref(true)
 
 // 计算属性
 const isActive = computed(() => securityStore.isActive)
@@ -224,6 +285,14 @@ const threatStatus = computed(() => {
   return '危险'
 })
 
+const resultClass = computed(() => {
+  return isSafe.value ? 'safe' : 'danger'
+})
+
+const resultTitle = computed(() => {
+  return isSafe.value ? '✅ 网站安全' : '⚠️ 疑似钓鱼网站'
+})
+
 // 方法
 function getScoreColor(score: number) {
   if (score >= 90) return '#67c23a'
@@ -296,6 +365,71 @@ async function updateSetting() {
     await securityStore.updateSettings(settings.value)
   } catch (error) {
     console.error('更新设置失败:', error)
+  }
+}
+
+// AI钓鱼网站检测
+async function detectPhishing() {
+  if (!phishingUrl.value.trim()) return
+  
+  isAnalyzing.value = true
+  phishingResult.value = ''
+  
+  try {
+    // 使用OpenRouter免费API (deepseek-r1t2-chimera模型)
+    const apiKey = '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' // 请替换为你的OpenRouter API Key
+    
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://github.com/web-security-guardian', // 可选：用于OpenRouter排名
+        'X-Title': 'Web Security Guardian', // 可选：用于OpenRouter排名
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'tngtech/deepseek-r1t2-chimera:free',
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个网络安全专家，专门识别钓鱼网站。请分析用户提供的URL，判断是否为钓鱼网站。回答要简洁明了，包含：1.判断结果（安全/危险）2.主要原因 3.风险等级。用中文回答，格式清晰。'
+          },
+          {
+            role: 'user',
+            content: `请分析这个网址是否为钓鱼网站：${phishingUrl.value}\n\n请从以下方面分析：\n1. 域名特征（是否仿冒知名网站）\n2. URL结构（是否有异常字符或编码）\n3. 顶级域名可信度\n4. 是否包含可疑关键词\n5. 综合安全评估`
+          }
+        ]
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API请求失败: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    const aiResponse = data.choices[0].message.content
+    
+    // 判断是否安全（简单的关键词匹配）
+    const dangerKeywords = ['危险', '钓鱼', '不安全', '风险', '可疑', '仿冒', '欺诈']
+    const safeKeywords = ['安全', '正常', '可信', '合法']
+    
+    const hasDanger = dangerKeywords.some(keyword => aiResponse.includes(keyword))
+    const hasSafe = safeKeywords.some(keyword => aiResponse.includes(keyword))
+    
+    isSafe.value = !hasDanger || (hasSafe && !aiResponse.includes('高风险'))
+    
+    // 格式化输出
+    phishingResult.value = aiResponse
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/###\s*(.*?)(<br>|$)/g, '<h4>$1</h4>')
+    
+  } catch (error) {
+    console.error('AI检测失败:', error)
+    phishingResult.value = `<p style="color: #f56c6c;">❌ 检测失败: ${error instanceof Error ? error.message : '未知错误'}</p><p>请检查网络连接或稍后重试。</p>`
+    isSafe.value = true
+  } finally {
+    isAnalyzing.value = false
   }
 }
 
@@ -390,7 +524,7 @@ async function calculatePageScore(url: string) {
 // 监听storage变化
 function setupStorageListener() {
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.onChanged.addListener((changes, areaName) => {
+    chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
       if (areaName === 'local') {
         console.log('📦 Storage changed:', changes)
         
@@ -606,6 +740,100 @@ onMounted(async () => {
 
 .toggle-item:not(:last-child) {
   border-bottom: 1px solid #f0f0f0;
+}
+
+/* AI钓鱼网站检测对话框样式 */
+.phishing-detector {
+  padding: 8px;
+}
+
+.result-box {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 8px;
+  border: 2px solid;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-box.safe {
+  background: #f0f9ff;
+  border-color: #67c23a;
+}
+
+.result-box.danger {
+  background: #fef0f0;
+  border-color: #f56c6c;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.result-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.result-box.safe .result-header {
+  color: #67c23a;
+}
+
+.result-box.danger .result-header {
+  color: #f56c6c;
+}
+
+.result-content {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #333;
+}
+
+.result-content :deep(h4) {
+  margin: 12px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.result-content :deep(strong) {
+  color: #764ba2;
+  font-weight: 600;
+}
+
+.analyzing-tips {
+  margin-top: 20px;
+  padding: 16px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.analyzing-tips p {
+  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.analyzing-tips .el-icon {
+  font-size: 32px;
+  color: #667eea;
 }
 </style>
 
