@@ -188,12 +188,12 @@ onMounted(() => {
         <h2>恶意URL访问测试 <span class="status testing">Testing</span></h2>
         <div class="test-item">
           <h3>1. 模拟驱动下载</h3>
-          <button class="danger" @click="openMaliciousUrl('http://malware-test.invalid/drive-by-download.exe')">
+          <!-- <button class="danger" @click="openMaliciousUrl('http://malware-test.invalid/drive-by-download.exe')">
             打开恶意下载链接
           </button>
           <button class="danger" @click="fetchMaliciousResource('http://malware-test.invalid/payload.js')">
             尝试静默请求恶意脚本
-          </button>
+          </button> -->
           <button class="danger" @click="injectMaliciousIframe('http://exploit-kit.invalid/landing')">
             注入隐藏iframe
           </button>
@@ -217,18 +217,18 @@ onMounted(() => {
           <input v-model="xssInput3" placeholder="测试javascript:协议..." />
           <button @click="testXSS3">触发协议注入</button>
         </div>
-        <div class="test-item">
+        <!-- <div class="test-item">
           <h3>5. 危险函数调用</h3>
           <button class="danger" @click="testEval">测试 eval()</button>
           <button class="danger" @click="testFunctionConstructor">测试 Function()</button>
           <button class="danger" @click="testSetTimeoutString">测试 setTimeout(string)</button>
-        </div>
+        </div> -->
       </section>
 
       <section class="test-section">
         <h2>SQL注入检测测试</h2>
         <div class="test-item">
-          <h3>6. 表单SQL注入</h3>
+          <h3>5. 表单SQL注入</h3>
           <form @submit.prevent="testSQLInjection">
             <input name="username" value="admin' OR '1'='1" placeholder="用户名 (如: admin' OR '1'='1)" />
             <input name="search" value="'; DROP TABLE users--" placeholder="搜索 (如: '; DROP TABLE users--)" />
@@ -240,7 +240,7 @@ onMounted(() => {
       <section class="test-section">
         <h2>敏感信息泄露检测</h2>
         <div class="test-item">
-          <h3>7. 非HTTPS提交敏感数据</h3>
+          <h3>6. 非HTTPS提交敏感数据</h3>
           <form action="http://example.com/login" method="post" @submit.prevent="testSensitiveData">
             <input name="email" type="email" value="security@example.com" placeholder="邮箱: security@example.com" />
             <input name="phone" type="tel" value="13800138000" placeholder="手机号: 13800138000" />
@@ -254,21 +254,17 @@ onMounted(() => {
       <section class="test-section">
         <h2>恶意脚本注入检测</h2>
         <div class="test-item">
-          <h3>8. 动态脚本注入</h3>
+          <h3>7. 动态脚本注入</h3>
           <button class="danger" @click="injectMaliciousScript">注入可疑内联脚本</button>
           <button class="danger" @click="injectExternalScript">加载外部恶意脚本</button>
         </div>
-        <div class="test-item">
-          <h3>9. 混淆代码检测</h3>
-          <textarea v-model="obfuscatedCode" placeholder="粘贴混淆JavaScript代码片段..."></textarea>
-          <button @click="testObfuscatedCode">提交检测</button>
-        </div>
+        
       </section>
 
       <section class="test-section">
         <h2>第三方追踪器阻止测试</h2>
         <div class="test-item">
-          <h3>10. 尝试加载常见追踪脚本</h3>
+          <h3>8. 尝试加载常见追踪脚本</h3>
           <button @click="loadGoogleAnalytics">加载 Google Analytics</button>
           <button @click="loadFacebookPixel">加载 Facebook Pixel</button>
           <button @click="loadMixpanel">加载 Mixpanel</button>
@@ -287,13 +283,11 @@ onMounted(() => {
       <section class="test-section">
         <h2>钓鱼网站检测测试</h2>
         <div class="test-item">
-          <h3>11. 可疑链接集合</h3>
+          <h3>9. 可疑链接集合</h3>
           <div class="phishing-links">
             <a href="http://paypal-secure-verify.test" target="_blank" rel="noreferrer">paypal-secure-verify.test</a>
             <a href="http://amazon-account-verify.test" target="_blank" rel="noreferrer">amazon-account-verify.test</a>
             <a href="http://google-security-check.test" target="_blank" rel="noreferrer">google-security-check.test</a>
-            <a href="http://free-iphone-giveaway.test" target="_blank" rel="noreferrer">free-iphone-giveaway.test</a>
-            <a href="http://bitcoin-doubler.test" target="_blank" rel="noreferrer">bitcoin-doubler.test</a>
           </div>
         </div>
       </section>
