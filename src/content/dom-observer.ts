@@ -5,9 +5,22 @@
 import type { ThreatDetection } from '../types'
 import { detectXSS } from '../utils/security'
 
+interface ProtectionSettings {
+  enabled: boolean
+  maliciousUrlProtection: boolean
+  xssProtection: boolean
+  trackerBlocking: boolean
+  formProtection: boolean
+  phishingProtection: boolean
+  notifications: boolean
+  autoUpdate: boolean
+  strictMode: boolean
+}
+
 export class DOMObserver {
   private observer: MutationObserver | null = null
   private threatCallback?: (threat: ThreatDetection) => void
+  private settings: ProtectionSettings | null = null
 
   initialize() {
     this.setupDOMObserver()
@@ -16,6 +29,10 @@ export class DOMObserver {
 
   setThreatCallback(callback: (threat: ThreatDetection) => void) {
     this.threatCallback = callback
+  }
+
+  setSettings(settings: ProtectionSettings) {
+    this.settings = settings
   }
 
   private setupDOMObserver() {
@@ -159,12 +176,17 @@ export class DOMObserver {
     if (src) {
       // 外部脚本
       if (!this.isTrustedDomain(src)) {
+        // 检查是否是恶意URL
+        const isMalicious = this.checkIfMaliciousUrl(src)
+        
         this.reportThreat({
           id: `dynamic_external_script_${Date.now()}`,
-          type: 'suspicious_script',
+          type: isMalicious ? 'malicious_url' : 'suspicious_script',
           level: 'high',
           url: window.location.href,
-          description: `动态加载外部脚本: ${new URL(src).hostname}`,
+          description: isMalicious 
+            ? `检测到恶意脚本: ${new URL(src).hostname}` 
+            : `动态加载外部脚本: ${new URL(src).hostname}`,
           timestamp: Date.now(),
           blocked: false,
           details: { src }
@@ -191,16 +213,55 @@ export class DOMObserver {
     const src = iframe.src
     
     if (src && !this.isTrustedDomain(src)) {
+      // 检查是否是恶意URL
+      const isMalicious = this.checkIfMaliciousUrl(src)
+      
       this.reportThreat({
         id: `dynamic_iframe_${Date.now()}`,
-        type: 'suspicious_script',
-        level: 'medium',
+        type: isMalicious ? 'malicious_url' : 'suspicious_script',
+        level: isMalicious ? 'high' : 'medium',
         url: window.location.href,
-        description: `动态添加外部iframe: ${new URL(src).hostname}`,
+        description: isMalicious 
+          ? `检测到恶意iframe: ${new URL(src).hostname}` 
+          : `动态添加外部iframe: ${new URL(src).hostname}`,
         timestamp: Date.now(),
         blocked: false,
         details: { src }
       })
+    }
+  }
+
+  private checkIfMaliciousUrl(url: string): boolean {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase()
+      
+      // 内置的恶意URL列表（与background保持一致）
+      const maliciousPatterns = [
+        /malware.*example/i,
+        /phishing.*test/i,
+        /suspicious.*site/i,
+        /fake.*bank/i,
+        /scam.*lottery/i,
+        /evil.*domain/i,
+        /exploit.*kit/i,
+        /malware/i,
+        /virus/i,
+        /trojan/i,
+        /ransomware/i,
+        /spyware/i,
+        /paypal.*verify/i,
+        /paypal.*secure/i,
+        /amazon.*verify/i,
+        /google.*verify/i,
+        /microsoft.*update/i,
+        /bitcoin.*doubler/i,
+        /free.*money/i,
+        /win.*prize/i
+      ]
+      
+      return maliciousPatterns.some(pattern => pattern.test(hostname))
+    } catch {
+      return false
     }
   }
 
@@ -281,6 +342,33 @@ export class DOMObserver {
   }
 
   private reportThreat(threat: ThreatDetection) {
+    // 检查总开关
+    if (this.settings && !this.settings.enabled) {
+      return
+    }
+
+    // 根据威胁类型检查对应的开关
+    if (this.settings) {
+      const shouldReport = (() => {
+        switch (threat.type) {
+          case 'malicious_url':
+            return this.settings.maliciousUrlProtection
+          case 'xss_attack':
+            return this.settings.xssProtection
+          case 'suspicious_script':
+            return this.settings.xssProtection  // 可疑脚本归类到XSS防护
+          case 'insecure_form':
+            return this.settings.formProtection
+          default:
+            return true
+        }
+      })()
+
+      if (!shouldReport) {
+        return
+      }
+    }
+
     if (this.threatCallback) {
       this.threatCallback(threat)
     }

@@ -361,12 +361,6 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-
-    <div class="footer-actions">
-      <el-button @click="saveSettings" type="primary">保存设置</el-button>
-      <el-button @click="resetSettings">重置为默认</el-button>
-      <el-button @click="exportData">导出数据</el-button>
-    </div>
   </div>
 </template>
 

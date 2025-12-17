@@ -19,22 +19,22 @@
     "file": "assets/_plugin-vue_export-helper-TOMzp7mW.css",
     "src": "__plugin-vue_export-helper-TOMzp7mW.css"
   },
-  "_index.ts-loader-DlPf67nH.js": {
-    "file": "assets/index.ts-loader-DlPf67nH.js",
-    "src": "_index.ts-loader-DlPf67nH.js"
+  "_index.ts-loader-Do75wO6K.js": {
+    "file": "assets/index.ts-loader-Do75wO6K.js",
+    "src": "_index.ts-loader-Do75wO6K.js"
   },
   "_security-6RDsp77e.js": {
     "file": "assets/security-6RDsp77e.js",
     "name": "security"
   },
   "src/background/index.ts": {
-    "file": "assets/index.ts-MfH4Izy_.js",
+    "file": "assets/index.ts-CDlyXi94.js",
     "name": "index.ts",
     "src": "src/background/index.ts",
     "isEntry": true
   },
   "src/content/index.ts": {
-    "file": "assets/index.ts-C6ZPqZDG.js",
+    "file": "assets/index.ts-C2P7X-eb.js",
     "name": "index.ts",
     "src": "src/content/index.ts",
     "isEntry": true,
@@ -43,7 +43,7 @@
     ]
   },
   "src/options/index.html": {
-    "file": "assets/index.html-BoQ5oZVr.js",
+    "file": "assets/index.html-DXgWN9K7.js",
     "name": "index.html",
     "src": "src/options/index.html",
     "isEntry": true,
@@ -52,11 +52,11 @@
       "_security-6RDsp77e.js"
     ],
     "css": [
-      "assets/index-DlqJdsVL.css"
+      "assets/index-DC60Sitg.css"
     ]
   },
   "src/popup/index.html": {
-    "file": "assets/index.html-DMoWPRuA.js",
+    "file": "assets/index.html-DacEygP2.js",
     "name": "index.html",
     "src": "src/popup/index.html",
     "isEntry": true,
@@ -65,7 +65,7 @@
       "_security-6RDsp77e.js"
     ],
     "css": [
-      "assets/index-CZiD1n8E.css"
+      "assets/index-BaaPm84p.css"
     ]
   }
 }

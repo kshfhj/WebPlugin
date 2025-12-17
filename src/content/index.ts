@@ -45,7 +45,7 @@ let protectionSettings = {
 }
 
 // 从存储中加载设置
-chrome.storage.local.get(['protection_settings'], (result) => {
+chrome.storage.local.get(['protection_settings'], (result: any) => {
   if (result.protection_settings) {
     protectionSettings = { ...protectionSettings, ...result.protection_settings }
     console.log('✅ Content script settings loaded:', protectionSettings)
@@ -53,10 +53,13 @@ chrome.storage.local.get(['protection_settings'], (result) => {
 })
 
 // 监听设置变化
-chrome.storage.onChanged.addListener((changes, areaName) => {
+chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
   if (areaName === 'local' && changes.protection_settings) {
     protectionSettings = changes.protection_settings.newValue
     console.log('⚙️ Content script settings updated:', protectionSettings)
+    
+    // 更新DOM观察器的设置
+    domObserver.setSettings(protectionSettings)
   }
 })
 
@@ -675,6 +678,7 @@ async function startAfterDomReady() {
     
     // 启动所有监控器
     domObserver.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
+    domObserver.setSettings(protectionSettings)
     domObserver.initialize()
     
     formMonitor.setThreatCallback((threat) => handleThreat(threat, { notifyBackground: true }))
