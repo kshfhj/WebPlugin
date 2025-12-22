@@ -501,7 +501,7 @@ onMounted(() => {
           <button @click="loadGoogleAnalytics">加载 Google Analytics</button>
           <button @click="loadFacebookPixel">加载 Facebook Pixel</button>
           <button @click="loadMixpanel">加载 Mixpanel</button>
-          <div class="tracker-status">
+          <!-- <div class="tracker-status">
             <p
               v-for="(entry, index) in trackerStatus"
               :key="index"
@@ -509,7 +509,7 @@ onMounted(() => {
             >
               {{ entry }}
             </p>
-          </div>
+          </div> -->
         </div>
       </section>
 
